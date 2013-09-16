@@ -24,9 +24,10 @@ def provision():
     
 
 @task
-def installMongo:
+def installMongo():
+    require.deb.key('7F0CEB10', keyserver='keyserver.ubuntu.com')
     require.deb.source('mongodb', 'http://downloads-distro.mongodb.org/repo/ubuntu-upstart', 'dist', '10gen')
-    deb.update_index()
+    # deb.update_index()
     require.deb.packages([
         'mongodb-10gen',
         ], update=True)
