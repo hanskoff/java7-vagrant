@@ -1,34 +1,47 @@
-from fabric.api import *
+from fabric.api import task, settings
 from fabtools.vagrant import vagrant
-from fabtools import require, deb, oracle_jdk, python
+from fabtools import require, deb, oracle_jdk, python, tomcat
 
 @task
 def provision():
     require.file('.vimrc', source='vimrc')
-    oracle_jdk.install_from_oracle_site()
+    deb.update_index()
+    # install java7
+    require.oracle_jdk.installed()
+    # install tomcat7
+    require.tomcat.installed()
+    # install mysql
     require.mysql.server(password='s3cr3t')
     with settings(mysql_user='root', mysql_password='s3cr3t'):
         require.mysql.user('dbuser', 'somerandomstring')
         require.mysql.database('myapp', owner='dbuser')
+    # install other packages
     require.deb.packages([
         'build-essential',
-        'maven',
-        'ant',
-        'git',
-        'vim',
-        'curl',
-        'python-dev',
-        'python-pip'
+        'python'
         ], update=True)
     deb.upgrade()
+    
 
 @task
-def provision_glassfish():
-    require.file('glassfish.zip', url='http://download.java.net/glassfish/3.1.2.2/release/glassfish-3.1.2.2.zip')
-    run('unzip -o glassfish.zip')
-    run('echo "AS_ADMIN_PASSWORD=" > /tmp/password.txt')
-    run('echo "AS_ADMIN_NEWPASSWORD=adminadmin" >> /tmp/password.txt')
-    run('glassfish3/bin/asadmin --user admin --passwordfile /tmp/password.txt change-admin-password --domain_name domain1')
-    run('echo "AS_ADMIN_PASSWORD=adminadmin" > /tmp/password.txt')
-    run('glassfish3/bin/asadmin start-domain && glassfish3/bin/asadmin --passwordfile /tmp/password.txt --host localhost --port 4848 enable-secure-admin && glassfish3/bin/asadmin stop-domain')
-    run('rm /tmp/password.txt')
+def installMongo:
+    require.deb.source('mongodb', 'http://downloads-distro.mongodb.org/repo/ubuntu-upstart', 'dist', '10gen')
+    deb.update_index()
+    require.deb.packages([
+        'mongodb-10gen',
+        ], update=True)
+
+@task
+def installTomcat():
+    require.oracle_jdk.installed()
+    # install tomcat
+    require.tomcat.installed('6.0.36')
+    # require.tomcat.installed()
+
+@task
+def startTomcat():
+    tomcat.start_tomcat()
+
+@task
+def versionTom():
+    print tomcat.version()
